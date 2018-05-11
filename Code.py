@@ -778,7 +778,7 @@ def return_relations(word):
             list_of_rels.append((words.split(), total_reliability))
             
         out_list = []
-        for i in sorted(list_of_rels, key=itemgetter(1), reverse =True)[0:6]:
+        for i in sorted(list_of_rels, key=itemgetter(1), reverse =True)[0:5]:
             if word == i[0][0]:
                 out_list.append(i[0][1])
             else:
