@@ -1,4 +1,10 @@
-import MlrsReader.MlrsReader as MlrsReader
+# Aaron Vella - Automatic Lexical Relation Extractor
+
+# Code able to run without providing a corpus and uses previously collected data
+try:
+    import MlrsReader.MlrsReader as MlrsReader
+except:
+    pass
 
 from nltk.chunk.regexp import *
 from collections import defaultdict
@@ -6,9 +12,13 @@ from operator import itemgetter
 import math
 import os
 import json
+import getpass
 
-corpus_path = '../../CorpusSplit'
-reader = MlrsReader.MlrsReader(corpus_path, r'.*\.txt', ["words", "pos", "lemma", "root"])
+try:
+    corpus_path = '../../CorpusSplit' # Change dir to data location
+    reader = MlrsReader.MlrsReader(corpus_path, r'.*\.txt', ["words", "pos", "lemma", "root"])
+except:
+    no_data = True
 
 
 def lookup(word1, word2):
@@ -457,7 +467,7 @@ def get_new_word_pair_pmi():
     Get values required to evaluate the pmi of newly found word pairs
     WARNING: only to be used after patterns_in_corpus() function.
     """
-    for relation in ['Hyper-Hypo','Meronym']: #'Antonym', 
+    for relation in ['Antonym', 'Hyper-Hypo', 'Meronym']:
         print(relation)
         
         word_pair_frequency = dict()
@@ -477,14 +487,14 @@ def get_new_word_pair_pmi():
             cond = ('<X>', '<NOUN>')
             cut_off = 300
         
-        tot_sents = 10257226 / 2
+        tot_sents = 10257226
         sent_count = 0
         one_percent = round(tot_sents / 100)
         
         with open('NonSeedMatchesFreq/' + relation + '_Words_Clean.txt', 'r', encoding='utf-8') as f:
             new_word_pairs = [line.split() for line in f if int(line.split()[2]) >= cut_off]
             
-        for corpus_sent in reader.tagged_lem_sents()[:round(tot_sents)]:
+        for corpus_sent in reader.tagged_lem_sents():
             sent_count += 1
             if sent_count % one_percent == 0:
                 print(str(round((sent_count / (tot_sents)) * 100)) + '% Complete...')
@@ -699,8 +709,7 @@ def run_espresso():
                 if words in esp_rel_words_pats:
                     esp_rel_words_pats[words][pattern] = fin_rel_dict[pattern]
                 else:
-                    esp_rel_words_pats[words] = {pattern : fin_rel_dict[pattern]}
-                        
+                    esp_rel_words_pats[words] = {pattern : fin_rel_dict[pattern]}              
                 
         # save each word pair with reliability scale        
         
@@ -742,7 +751,7 @@ def return_relations(word):
         relations = ['Meronym']
 
     for relation in relations:
-        print("Ordered by Frequency: ")
+        print("Issortjajt bil-Frekwenza tal-kliem: ")
         
         with open('NonSeedMatchesFreq/' + relation + '_Words_Clean.txt', 'r', encoding='utf-8') as f:
             words_in_relation = []
@@ -755,7 +764,7 @@ def return_relations(word):
                 elif word == line[1]:
                     words_in_relation.append(line[0])
             print((relation, words_in_relation))
-        print("Ordered by Espresso Reliability: ")
+        print("Issortjajt b'affidabilità ta\' l-Espresso: ")
 
         with open('Espresso_Patterns/' + relation + '_rm.json') as jsonfile:
             esp_words = json.load(jsonfile)
@@ -769,7 +778,7 @@ def return_relations(word):
             list_of_rels.append((words.split(), total_reliability))
             
         out_list = []
-        for i in sorted(list_of_rels, key=itemgetter(1), reverse =True)[0:11]:
+        for i in sorted(list_of_rels, key=itemgetter(1), reverse =True)[0:6]:
             if word == i[0][0]:
                 out_list.append(i[0][1])
             else:
@@ -781,20 +790,42 @@ def return_relations(word):
 
 ####################################################
 
+def sub_menu():
+    """
+    Sub Menu
+    """
+    print('1. Iġġenera Mudelli Ġodda u Naddaf ir-Riżultati')
+    print('2. Uża il-Mudelli Biex Issib Kliem Ġodda u Aħdem Statistiċi tal-PMI u Espresso')
+    print('3. Oħroġ fil-Menu ta\' Barra')
+    print()
+    choice = int(input('Jekk jogħġbok għażel waħda mil-funzjonijiet: '))
+    if choice == 1:
+        form_patterns()
+        run_pattern_conversion()
+    elif choice == 2:
+        ext_sent_analysis()
+        patterns_in_corpus_init()
+        cleaning_new_words_all()
+        get_new_word_pair_pmi()
+        run_espresso()
+    elif choice == 3:
+        menu()
+        return
 
+####################################################
+    
 def menu():
     """
     Main Menu
     """
 
-    print('Estrazzjoni ta\' Relazzjonijiet Lessikali Bil-Malti v 0.9.2 - Aaron Vella')
+    print('Estrazzjoni ta\' Relazzjonijiet Lessikali Bil-Malti v 1.0.2 - Aaron Vella')
     print('_________________________________________________________________________')
     print('')
     print('1. Fittex Kelma')
     print('2. Iġġenera Data Ġdida')
     print('3. Instruzzjonijiet')
-    print('4. Termini u Kundizzjonijiet')
-    print('5. Għalaq Il-Program')
+    print('4. Għalaq Il-Program')
     print()
     choice = int(input('Jekk jogħġbok għażel waħda mil-funzjonijiet: '))
 
@@ -804,28 +835,33 @@ def menu():
             return_relations(word_input)
             print()
             choice = int(input('Jekk jogħġbok għażel waħda mil-funzjonijiet: '))
+        elif choice == 2:
+            if no_data:
+                print('Korpus Mux Prezenti - jekk jogħġbok kellem administratur')
+            else:
+                print('Ikteb il-password biex tkompli: ')
+                pass_req = getpass.getpass()
+                if pass_req == 'admin':
+                    sub_menu()
+                else:
+                    print('Il-password li ktibt mhux tajba')
+            choice = int(input('Jekk jogħġbok għażel waħda mil-funzjonijiet: '))
         elif choice == 3:
-            print('load instructions text file')
+            with open('Instuzzjonijiet.txt', 'r', encoding='utf-8') as f:
+                      for line in f:
+                          print(line.strip('\n'))
             print()
             choice = int(input('Jekk jogħġbok għażel waħda mil-funzjonijiet: '))
         elif choice == 4:
-            print('load terms and conditions text file')
-            print()
-            choice = int(input('Jekk jogħġbok għażel waħda mil-funzjonijiet: '))
-        elif choice == 5:
-            print('Caw Bobby')
-            break
+            print('Grazzi talli użajt din is-sistema.')
+            print('Jekk għandek xi suġġerimenti li jistu isiru, ibgħat e-mail lil:')
+            print('aaron.vella.995@gmail.com')
+            input('Għafas ENTER biex tagħlaq il-programm')
+            exit()
         else:
             choice = int(input('In-numru li daħħalt mhuwiex validu, jekk jogħġbok erġa prova: '))
 
 
 if __name__ == '__main__':
     menu()
-    # form_patterns()
-    # run_pattern_conversion()
-    # ext_sent_analysis()
-    # patterns_in_corpus_init()
-    # cleaning_new_words_all()
-    # run_espresso()
-    # get_new_word_pair_pmi()
-    pass
+    
